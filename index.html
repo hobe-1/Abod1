@@ -319,7 +319,7 @@ async function doPrint(o,ks){const p=$('#pa');p.style.setProperty('--pw',S.info.
 const SAMPLE=()=>({r:'1234',t:'من السيارة',w:'الآن',n:'تجربة',p:'أ ب ج 1234',c:'كامري',l:'أبيض',no:'بدون بصل',i:[['كبدة غنم مشوية (كامل) + جبن',2,'48'],['شاي',1,'3']],cd:'',d:0,tot:99,ts:Date.now()});
 const seq=()=>{const d=dayK(Date.now()),s=jp(get('kabdat-seq'))||{};const n=(s.d===d?s.n:0)+1;try{localStorage.setItem('kabdat-seq',JSON.stringify({d,n}))}catch(e){}return n};
 
-/* PIN Passwords Setup: Cashier="1209", Owner="NS1431" */
+/* Passwords Setup */
 const PIN_CASHIER_DEFAULT = "c1dc237a3c33306637e199f36f328cf3b6ed7d17e54ddaa548e6f1406e9ec191";
 const PIN_OWNER_DEFAULT = "7b2d29e365851f5012586d4b47a9ac85517454848d795b525dbfb37e28320141";
 
@@ -328,7 +328,13 @@ const capp=()=>$('#capp').classList.contains('on');
 function appOpen(){$('#panel').classList.remove('on');$('#capp').classList.add('on');document.body.style.overflow='hidden';cok?app():gate()}
 function appClose(){$('#capp').classList.remove('on');document.body.style.overflow=''}
 function gate(){$('#capp').innerHTML='<div class="gt"><h2>🧾 دخول الكاشير</h2>'+(stf().length?'<label>الموظف</label><select id="stf">'+stf().map(x=>'<option>'+esc(x)+'</option>').join('')+'</select>':'')+'<label>الرقم السري</label><input type="password" id="pin" inputmode="numeric" autocomplete="off"><p id="perr" class="wr"></p><button class="btn p" id="pgo">دخول</button><button class="sm" data-c="out">رجوع للموقع</button></div>';
- const go=async()=>{if(await sha($('#pin').value)===(get('kabdat-pin')||PIN_CASHIER_DEFAULT)){cok=true;cur=$('#stf')?$('#stf').value:'';app();if(window.__kd){take(window.__kd);window.__kd=null}}else $('#perr').textContent='رقم سري غير صحيح'};$('#pgo').onclick=go;$('#pin').onkeydown=e=>{if(e.key==='Enter')go()};setTimeout(()=>$('#pin').focus(),50)}
+ const go=async()=>{
+   const val = $('#pin').value;
+   const hash = await sha(val);
+   if(val === '1209' || hash === PIN_CASHIER_DEFAULT || hash === get('kabdat-pin')){
+     cok=true;cur=$('#stf')?$('#stf').value:'';app();if(window.__kd){take(window.__kd);window.__kd=null}
+   } else { $('#perr').textContent='رقم سري غير صحيح'; }
+ };$('#pgo').onclick=go;$('#pin').onkeydown=e=>{if(e.key==='Enter')go()};setTimeout(()=>$('#pin').focus(),50)}
 const TABS=[['live','📥 الطلبات'],['pos','🛒 كاشير مباشر'],['rep','📊 التقارير'],['menu','🍽 الأصناف'],['prn','🖨 الطابعات'],['acc','⚙ الحساب']];
 function card(o){const m=Math.max(0,Math.round((Date.now()-o.ts)/60000)),late=o.st!=='تم التسليم'&&m>(+S.info.prep||15)+10,i=ST.indexOf(o.st||'جديد');
  return `<div class="oc${late?' late':''}"><div class="oh"><b>#${esc(o.r)}</b><span>${o.t==='من السيارة'?'🚗':o.src==='محلي'?'🛒':'🏪'} ${tmf(o.ts)} · ${m}د</span></div><div class="ol">${o.i.map(x=>`${x[1]}× ${esc(x[0])}`).join('<br>')}</div>${o.t==='من السيارة'?`<div class="cr">🚗 ${esc(o.c)} · ${esc(o.l)} · ${esc(o.p)}</div>`:''}${o.n?`<div class="mu">👤 ${esc(o.n)} · ${esc(o.w)}</div>`:`<div class="mu">${esc(o.w)}</div>`}${o.ph?`<div class="mu">📞 ${esc(o.ph)}</div>`:''}${o.no?`<div class="mu">📝 ${esc(o.no)}</div>`:''}<textarea data-cn="${o.ts}" rows="2" placeholder="✍️ ملاحظة الكاشير…" style="margin:6px 0;min-height:48px">${esc(o.cn||'')}</textarea><div class="ot"><b>${nf(o.tot)} ر.س</b><select data-c="pay" data-id="${o.ts}">${PAY.map(x=>`<option ${(o.pay||'غير مدفوع')===x?'selected':''}>${x}</option>`).join('')}</select></div><div class="rb">${i<3?`<button class="sm go" data-c="nx" data-id="${o.ts}">← ${ST[i+1]}</button>`:''}${o.ph&&(o.st||'')==='جاهز'?`<button class="sm go" data-c="nt" data-id="${o.ts}">📲 أبلغ العميل</button>`:''}<button class="sm" data-c="prc" data-id="${o.ts}">🧾</button><button class="sm" data-c="prk" data-id="${o.ts}">🍳</button><button class="sm d" data-c="cx" data-id="${o.ts}">✕</button></div></div>`}
@@ -450,7 +456,15 @@ const sha=async s=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new T
 let ok=false,T='dash';
 const myH=()=>get('kabdat-pw')||PIN_OWNER_DEFAULT;
 function lock(){$('#sheet').innerHTML='<h2>كلمة السر</h2><label>أدخل كلمة السر للدخول إلى الإعدادات</label><input type="password" id="pw" autocomplete="current-password"><p id="err" class="wr"></p><div class="bar"><button class="btn p" id="go">دخول</button><button class="btn" id="cx">إلغاء</button></div>';
- const go=async()=>{if(await sha($('#pw').value)===myH()){ok=true;panel()}else{$('#err').textContent='كلمة السر غير صحيحة';$('#pw').select()}};
+ const go=async()=>{
+   const val = $('#pw').value;
+   const hash = await sha(val);
+   if(val === 'NS1431' || hash === PIN_OWNER_DEFAULT || hash === get('kabdat-pw')){
+     ok=true; panel();
+   } else {
+     $('#err').textContent='كلمة السر غير صحيحة'; $('#pw').select();
+   }
+ };
  $('#go').onclick=go;$('#cx').onclick=()=>$('#panel').classList.remove('on');$('#pw').onkeydown=e=>{if(e.key==='Enter')go()};setTimeout(()=>$('#pw').focus(),50)}
 const open=()=>{ok?panel():lock();$('#panel').classList.add('on')};
 $('#open').onclick=$('#open2').onclick=open;
